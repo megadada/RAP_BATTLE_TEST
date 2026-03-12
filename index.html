@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hiphop Battle Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', 'Noto Sans KR', sans-serif;
+            background-color: #000000;
+            color: #F9FAFB;
+            overflow-x: hidden;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .scale-btn { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .scale-btn:active { transform: scale(0.96); }
+        
+        .battle-animate { animation: shake 0.5s infinite; }
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+        }
+        
+        .dice-roll { animation: roll 0.5s ease-out; border: 1px solid #374151; }
+        @keyframes roll {
+            0% { transform: translateY(15px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+        
+        .success-bg { background-color: rgba(16, 185, 129, 0.08) !important; border-color: rgba(16, 185, 129, 0.3) !important; }
+        .fail-bg { background-color: rgba(239, 68, 68, 0.05) !important; border-color: rgba(239, 68, 68, 0.2) !important; }
+        
+        .img-glow { box-shadow: 0 0 15px rgba(255, 255, 255, 0.1); }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div id="app" class="w-full max-w-[480px] min-h-[850px] bg-[#111827] relative rounded-[2.5rem] overflow-hidden flex flex-col shadow-2xl border border-[#374151]">
+        <!-- Header -->
+        <div class="p-6 border-b border-[#374151] flex justify-between items-center bg-[#111827] sticky top-0 z-20">
+            <div>
+                <h1 class="text-2xl font-black italic text-white tracking-tighter uppercase">RAP BATTLE</h1>
+                <p class="text-[10px] text-[#9CA3AF] font-bold tracking-widest uppercase">랩 배틀 시뮬레이터</p>
+            </div>
+            <button onclick="location.reload()" class="p-2 rounded-full bg-[#1F2937] text-[#9CA3AF] hover:text-white transition">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            </button>
+        </div>
+
+        <div id="main-content" class="flex-1 overflow-y-auto no-scrollbar p-5 pb-32">
+            <!-- Setup Stage -->
+            <div id="setup-container" class="space-y-8">
+                <!-- Player 1 -->
+                <div class="p-5 bg-[#1F2937] rounded-[2rem] border border-[#374151] relative">
+                    <span class="absolute -top-3 left-6 px-4 py-1 bg-[#EF4444] rounded-full text-[10px] font-black italic uppercase">Challenger 1</span>
+                    <div class="flex items-center gap-4 mb-4 mt-2">
+                        <div class="relative w-20 h-20 bg-[#111827] rounded-2xl border-2 border-dashed border-[#4B5563] flex items-center justify-center overflow-hidden cursor-pointer img-glow" onclick="document.getElementById('p1-file').click()">
+                            <img id="p1-preview" class="hidden w-full h-full object-cover">
+                            <span id="p1-placeholder" class="text-2xl opacity-50">📷</span>
+                            <input type="file" id="p1-file" class="hidden" accept="image/*" onchange="previewImage(1, event)">
+                        </div>
+                        <div class="flex-1">
+                            <input type="text" id="p1-name" placeholder="이름 입력" class="w-full bg-transparent border-b border-[#4B5563] focus:border-[#EF4444] outline-none text-xl font-bold py-1 mb-1 text-white">
+                            <select id="p1-genre" onchange="updateGenreStats(1)" class="bg-[#111827] text-xs font-bold text-[#9CA3AF] rounded-lg px-2 py-1 outline-none border border-[#374151]">
+                                <option value="Trap">트랩 (Trap)</option>
+                                <option value="BoomBap">붐뱁 (Boom Bap)</option>
+                                <option value="Drill">드릴 (Drill)</option>
+                                <option value="SingingRap">싱잉랩 (Singing)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="p1-stat-grid" class="grid grid-cols-2 gap-3 text-xs">
+                        <!-- Stats injected here -->
+                    </div>
+                </div>
+
+                <div class="flex justify-center -my-4 relative z-10"><div class="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center font-black italic border-4 border-[#111827]">VS</div></div>
+
+                <!-- Player 2 -->
+                <div class="p-5 bg-[#1F2937] rounded-[2rem] border border-[#374151] relative">
+                    <span class="absolute -top-3 left-6 px-4 py-1 bg-[#A855F7] rounded-full text-[10px] font-black italic uppercase">Challenger 2</span>
+                    <div class="flex items-center gap-4 mb-4 mt-2">
+                        <div class="relative w-20 h-20 bg-[#111827] rounded-2xl border-2 border-dashed border-[#4B5563] flex items-center justify-center overflow-hidden cursor-pointer img-glow" onclick="document.getElementById('p2-file').click()">
+                            <img id="p2-preview" class="hidden w-full h-full object-cover">
+                            <span id="p2-placeholder" class="text-2xl opacity-50">📷</span>
+                            <input type="file" id="p2-file" class="hidden" accept="image/*" onchange="previewImage(2, event)">
+                        </div>
+                        <div class="flex-1">
+                            <input type="text" id="p2-name" placeholder="이름 입력" class="w-full bg-transparent border-b border-[#4B5563] focus:border-[#A855F7] outline-none text-xl font-bold py-1 mb-1 text-white">
+                            <select id="p2-genre" onchange="updateGenreStats(2)" class="bg-[#111827] text-xs font-bold text-[#9CA3AF] rounded-lg px-2 py-1 outline-none border border-[#374151]">
+                                <option value="Trap">트랩 (Trap)</option>
+                                <option value="BoomBap" selected>붐뱁 (Boom Bap)</option>
+                                <option value="Drill">드릴 (Drill)</option>
+                                <option value="SingingRap">싱잉랩 (Singing)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="p2-stat-grid" class="grid grid-cols-2 gap-3 text-xs">
+                        <!-- Stats injected here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Battle Container -->
+            <div id="battle-container" class="hidden flex flex-col items-center justify-center py-6 space-y-8">
+                <div class="w-full flex justify-between items-center px-4 relative">
+                    <div class="flex flex-col items-center gap-2 z-10">
+                        <div class="w-20 h-20 rounded-full border-4 border-[#EF4444] overflow-hidden bg-[#1F2937] img-glow" id="p1-battle-img-box"></div>
+                        <div class="text-[10px] font-black bg-[#EF4444] text-white px-3 py-0.5 rounded-full italic shadow-lg" id="p1-success-count">HIT: 0</div>
+                    </div>
+                    <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-0">
+                        <div class="text-3xl font-black italic text-red-500 battle-animate whitespace-nowrap uppercase">Fight!!</div>
+                    </div>
+                    <div class="flex flex-col items-center gap-2 z-10">
+                        <div class="w-20 h-20 rounded-full border-4 border-[#A855F7] overflow-hidden bg-[#1F2937] img-glow" id="p2-battle-img-box"></div>
+                        <div class="text-[10px] font-black bg-[#A855F7] text-white px-3 py-0.5 rounded-full italic shadow-lg" id="p2-success-count">HIT: 0</div>
+                    </div>
+                </div>
+                <div id="battle-logs" class="w-full space-y-3 px-2 overflow-y-auto max-h-[450px] no-scrollbar"></div>
+            </div>
+
+            <!-- Result Container -->
+            <div id="result-container" class="hidden flex flex-col items-center py-6">
+                <div class="relative mb-6">
+                    <div class="w-40 h-40 rounded-full border-8 border-yellow-400 overflow-hidden shadow-[0_0_30px_rgba(250,204,21,0.4)] bg-[#1F2937]" id="winner-img-box"></div>
+                    <div class="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-yellow-400 text-black px-6 py-1 rounded-full font-black text-sm italic shadow-lg">WINNER</div>
+                </div>
+                <h2 id="winner-name" class="text-3xl font-black mb-1 text-white uppercase italic tracking-tighter"></h2>
+                <p id="winner-desc" class="text-sm text-[#9CA3AF] italic mb-6"></p>
+                <div id="final-summary" class="w-full bg-[#1F2937] rounded-[2rem] p-6 border border-[#374151] text-center">
+                    <div class="text-xs text-[#9CA3AF] font-bold uppercase tracking-widest mb-2 italic">Performance Analysis</div>
+                    <div id="score-bars" class="space-y-4"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer Button -->
+        <div id="footer-actions" class="p-6 bg-[#111827] border-t border-[#374151] sticky bottom-0 z-20">
+            <button id="action-btn" onclick="startBattle()" class="w-full py-5 rounded-2xl bg-[#F9FAFB] text-[#111827] font-extrabold text-xl scale-btn shadow-lg uppercase tracking-tight">
+                배틀 시작하기
+            </button>
+            <div id="result-btns" class="hidden flex gap-3 w-full">
+                <button onclick="rematch()" class="flex-1 py-5 rounded-2xl bg-[#374151] text-white font-extrabold text-lg scale-btn shadow-lg uppercase tracking-tight">
+                    재대결
+                </button>
+                <button onclick="location.reload()" class="flex-1 py-5 rounded-2xl bg-[#F9FAFB] text-[#111827] font-extrabold text-lg scale-btn shadow-lg uppercase tracking-tight">
+                    새로운 대결
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const genreColors = {'Trap': '#EF4444', 'BoomBap': '#F59E0B', 'Drill': '#6B7280', 'SingingRap': '#A855F7'};
+        
+        const genreConfig = {
+            'Trap': { names: ['에너지', '트렌드', '아우라', '스웨그', '브래깅', '중독성'] },
+            'BoomBap': { names: ['딕션/전달', '라임/작사', '서사', '기본기', '발성/호흡', '메시지'] },
+            'Drill': { names: ['공격력', '리듬감', '에너지', '무대장악', '톤/발성', '정체성'] },
+            'SingingRap': { names: ['멜로디', '음색/톤', '싱잉센스', '감정/표현', '가창력', '대중성'] }
+        };
+
+        let p1ImageData = null, p2ImageData = null;
+
+        function updateGenreStats(playerNum) {
+            const genre = document.getElementById(`p${playerNum}-genre`).value;
+            const config = genreConfig[genre];
+            const grid = document.getElementById(`p${playerNum}-stat-grid`);
+            
+            grid.innerHTML = config.names.map((name, i) => `
+                <div>
+                    <label class="block text-[#9CA3AF] mb-1 font-bold italic uppercase text-[9px] tracking-tighter">${name}</label>
+                    <input type="number" id="p${playerNum}-s${i+1}" value="70" class="w-full bg-[#111827] rounded-xl p-2 border border-[#374151] text-white">
+                </div>
+            `).join('');
+        }
+
+        updateGenreStats(1);
+        updateGenreStats(2);
+
+        function previewImage(id, event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const result = e.target.result;
+                    if (id === 1) p1ImageData = result;
+                    else p2ImageData = result;
+                    const preview = document.getElementById(`p${id}-preview`);
+                    preview.src = result;
+                    preview.classList.remove('hidden');
+                    document.getElementById(`p${id}-placeholder`).classList.add('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function rematch() {
+            document.getElementById('result-container').classList.add('hidden');
+            document.getElementById('result-btns').classList.add('hidden');
+            document.getElementById('action-btn').classList.remove('hidden');
+            startBattle();
+        }
+
+        async function startBattle() {
+            const genre1 = document.getElementById('p1-genre').value;
+            const genre2 = document.getElementById('p2-genre').value;
+            
+            const p1 = {
+                name: document.getElementById('p1-name').value || 'Challenger 1',
+                img: p1ImageData,
+                stats: Array.from({length: 6}, (_, i) => parseInt(document.getElementById(`p1-s${i+1}`).value) || 0),
+                statNames: genreConfig[genre1].names,
+                genre: genre1
+            };
+            const p2 = {
+                name: document.getElementById('p2-name').value || 'Challenger 2',
+                img: p2ImageData,
+                stats: Array.from({length: 6}, (_, i) => parseInt(document.getElementById(`p2-s${i+1}`).value) || 0),
+                statNames: genreConfig[genre2].names,
+                genre: genre2
+            };
+
+            document.getElementById('setup-container').classList.add('hidden');
+            document.getElementById('battle-container').classList.remove('hidden');
+            const actionBtn = document.getElementById('action-btn');
+            actionBtn.disabled = true; 
+            actionBtn.innerText = '판정 진행 중...';
+
+            document.getElementById('p1-battle-img-box').innerHTML = p1.img ? `<img src="${p1.img}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center bg-gray-800 text-xl">👤</div>`;
+            document.getElementById('p2-battle-img-box').innerHTML = p2.img ? `<img src="${p2.img}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center bg-gray-800 text-xl">👤</div>`;
+
+            const logs = document.getElementById('battle-logs');
+            logs.innerHTML = '';
+
+            let p1Success = 0, p2Success = 0, p1TotalDiff = 0, p2TotalDiff = 0;
+
+            for (let i = 0; i < 6; i++) {
+                await new Promise(r => setTimeout(r, 1200)); 
+                
+                const d1 = Math.floor(Math.random() * 100) + 1;
+                const d2 = Math.floor(Math.random() * 100) + 1;
+                
+                const isP1Ok = d1 <= p1.stats[i];
+                const isP2Ok = d2 <= p2.stats[i];
+
+                if(isP1Ok) p1Success++;
+                if(isP2Ok) p2Success++;
+                
+                p1TotalDiff += (p1.stats[i] - d1);
+                p2TotalDiff += (p2.stats[i] - d2);
+
+                document.getElementById('p1-success-count').innerText = `HIT: ${p1Success}`;
+                document.getElementById('p2-success-count').innerText = `HIT: ${p2Success}`;
+
+                const logEntry = document.createElement('div');
+                logEntry.className = `dice-roll p-4 bg-[#1F2937] rounded-2xl transition-all duration-300 ${isP1Ok && isP2Ok ? 'success-bg' : (!isP1Ok && !isP2Ok ? 'fail-bg' : '')}`;
+                logEntry.innerHTML = `
+                    <div class="flex justify-between items-center mb-1">
+                        <div class="flex gap-4">
+                            <span class="text-[9px] font-black text-[#9CA3AF] italic uppercase tracking-wider">${p1.statNames[i]}</span>
+                            <span class="text-[9px] font-black text-[#9CA3AF] italic uppercase tracking-wider opacity-20">VS</span>
+                            <span class="text-[9px] font-black text-[#9CA3AF] italic uppercase tracking-wider">${p2.statNames[i]}</span>
+                        </div>
+                        <span class="text-[8px] font-bold text-yellow-500 bg-yellow-500/10 px-2 rounded-full border border-yellow-500/20 uppercase tracking-tighter">Target: ${p1.stats[i]} vs ${p2.stats[i]}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <div class="flex flex-col items-start ${isP1Ok?'text-green-400':'text-red-400'}">
+                            <span class="text-lg font-black leading-none">${d1} <small class="text-[10px]">${isP1Ok?'✓':'✗'}</small></span>
+                        </div>
+                        <div class="text-[9px] font-black italic opacity-20 uppercase tracking-tighter">RD ${i+1}</div>
+                        <div class="flex flex-col items-end ${isP2Ok?'text-green-400':'text-red-400'}">
+                            <span class="text-lg font-black leading-none"><small class="text-[10px]">${isP2Ok?'✓':'✗'}</small> ${d2}</span>
+                        </div>
+                    </div>
+                `;
+                logs.prepend(logEntry);
+            }
+
+            await new Promise(r => setTimeout(r, 1200));
+            showWinner(p1, p2, p1Success, p2Success, p1TotalDiff, p2TotalDiff);
+        }
+
+        function showWinner(p1, p2, ps1, ps2, td1, td2) {
+            document.getElementById('battle-container').classList.add('hidden');
+            document.getElementById('result-container').classList.remove('hidden');
+            
+            document.getElementById('action-btn').classList.add('hidden');
+            document.getElementById('action-btn').disabled = false;
+            document.getElementById('action-btn').innerText = '배틀 시작하기';
+            document.getElementById('result-btns').classList.remove('hidden');
+
+            let isP1Winner = ps1 > ps2;
+            if(ps1 === ps2) isP1Winner = td1 >= td2; 
+            
+            const winner = isP1Winner ? p1 : p2;
+            document.getElementById('winner-name').innerText = winner.name;
+            document.getElementById('winner-img-box').innerHTML = winner.img ? `<img src="${winner.img}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-5xl bg-gray-800">👤</div>`;
+            
+            const comments = [
+                "이것이 진정한 힙합의 실력 차이입니다.",
+                "판도를 뒤흔드는 완벽한 퍼포먼스였습니다.",
+                "리스너들의 귀를 사로잡은 압도적 승리자입니다."
+            ];
+            document.getElementById('winner-desc').innerText = comments[Math.floor(Math.random()*comments.length)];
+
+            document.getElementById('score-bars').innerHTML = `
+                <div class="flex justify-around items-end gap-6 h-32 pt-4">
+                    <div class="flex flex-col items-center flex-1">
+                        <div class="text-sm font-black mb-1" style="color:${genreColors[p1.genre]}">${ps1} HIT</div>
+                        <div class="w-full bg-[#111827] rounded-t-xl transition-all duration-1000" style="height:${Math.max((ps1/6)*100, 10)}%; background-color:${genreColors[p1.genre]}"></div>
+                        <div class="text-[10px] mt-2 font-bold opacity-60 uppercase">${p1.name}</div>
+                    </div>
+                    <div class="flex flex-col items-center flex-1">
+                        <div class="text-sm font-black mb-1" style="color:${genreColors[p2.genre]}">${ps2} HIT</div>
+                        <div class="w-full bg-[#111827] rounded-t-xl transition-all duration-1000" style="height:${Math.max((ps2/6)*100, 10)}%; background-color:${genreColors[p2.genre]}"></div>
+                        <div class="text-[10px] mt-2 font-bold opacity-60 uppercase">${p2.name}</div>
+                    </div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
